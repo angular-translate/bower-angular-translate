@@ -1,6 +1,6 @@
 {
   "name": "angular-translate",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "main": "./angular-translate.js",
   "dependencies": {
     "angular": "1.0.6",

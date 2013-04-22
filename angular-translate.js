@@ -34,6 +34,10 @@ angular.module('ngTranslate')
         scope.interpolateParams = interpolateParams;
       });
 
+      scope.$on('translationChangeSuccess', function () {
+        element.html(translate(scope.translationId, scope.interpolateParams));
+      });
+
       scope.$watch('translationId + interpolateParams', function () {
         element.html(translate(scope.translationId, scope.interpolateParams));
       });
@@ -96,7 +100,7 @@ angular.module('ngTranslate').provider('$translate', function () {
     $rememberLanguage = boolVal;
   };
 
-  this.$get = ['$interpolate', '$log', '$cookieStore', '$COOKIE_KEY', function ($interpolate, $log, $cookieStore, $COOKIE_KEY) {
+  this.$get = ['$interpolate', '$log', '$cookieStore', '$rootScope', '$COOKIE_KEY', function ($interpolate, $log, $cookieStore, $rootScope, $COOKIE_KEY) {
 
     $translate = function (translationId, interpolateParams) {
       var translation = ($uses) ? 
@@ -114,9 +118,12 @@ angular.module('ngTranslate').provider('$translate', function () {
       if (!key) {
         return $uses;
       }
-      $uses = key;
-      if ($rememberLanguage) {
-        $cookieStore.put($COOKIE_KEY, $uses);
+      if ($uses !== key) {
+        $uses = key;
+        if ($rememberLanguage) {
+          $cookieStore.put($COOKIE_KEY, $uses);
+        }
+        $rootScope.$broadcast('translationChangeSuccess');
       }
     };
 
