@@ -5,5 +5,5 @@ ng-translate bower package
 ### Installation
 
 ````
-$ bower install PascalPrecht/angular-translate
+$ bower install PascalPrecht/bower-angular-translate
 ````
