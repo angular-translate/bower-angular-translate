@@ -1,6 +1,6 @@
 # bower-angular-translate
 
-ng-translate bower package
+angular-translate bower package
 
 ### Installation
 
