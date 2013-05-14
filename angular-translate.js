@@ -1,4 +1,4 @@
-angular.module('ngTranslate', ['ng']).run([
+angular.module('pascalprecht.translate', ['ng']).run([
   '$translate',
   function ($translate) {
     var key = $translate.storageKey(), storage = $translate.storage();
@@ -17,8 +17,8 @@ angular.module('ngTranslate', ['ng']).run([
     }
   }
 ]);
-angular.module('ngTranslate').constant('$STORAGE_KEY', 'NG_TRANSLATE_LANG_KEY');
-angular.module('ngTranslate').provider('$translate', [
+angular.module('pascalprecht.translate').constant('$STORAGE_KEY', 'NG_TRANSLATE_LANG_KEY');
+angular.module('pascalprecht.translate').provider('$translate', [
   '$STORAGE_KEY',
   function ($STORAGE_KEY) {
     var $translationTable = {}, $preferredLanguage, $uses, $storageFactory, $storageKey = $STORAGE_KEY, $storagePrefix, $missingTranslationHandler, $asyncLoaders = [], NESTED_OBJECT_DELIMITER = '.';
@@ -274,7 +274,7 @@ angular.module('ngTranslate').provider('$translate', [
     ];
   }
 ]);
-angular.module('ngTranslate').directive('translate', [
+angular.module('pascalprecht.translate').directive('translate', [
   '$filter',
   '$interpolate',
   function ($filter, $interpolate) {
@@ -305,7 +305,7 @@ angular.module('ngTranslate').directive('translate', [
     };
   }
 ]);
-angular.module('ngTranslate').filter('translate', [
+angular.module('pascalprecht.translate').filter('translate', [
   '$parse',
   '$translate',
   function ($parse, $translate) {
@@ -317,7 +317,7 @@ angular.module('ngTranslate').filter('translate', [
     };
   }
 ]);
-angular.module('ngTranslate').factory('$translateCookieStorage', [
+angular.module('pascalprecht.translate').factory('$translateCookieStorage', [
   '$cookieStore',
   function ($cookieStore) {
     var $translateCookieStorage = {
@@ -331,7 +331,7 @@ angular.module('ngTranslate').factory('$translateCookieStorage', [
     return $translateCookieStorage;
   }
 ]);
-angular.module('ngTranslate').factory('$translateLocalStorage', [
+angular.module('pascalprecht.translate').factory('$translateLocalStorage', [
   '$window',
   '$translateCookieStorage',
   function ($window, $translateCookieStorage) {
