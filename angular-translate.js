@@ -21,7 +21,7 @@ angular.module('pascalprecht.translate').constant('$STORAGE_KEY', 'NG_TRANSLATE_
 angular.module('pascalprecht.translate').provider('$translate', [
   '$STORAGE_KEY',
   function ($STORAGE_KEY) {
-    var $translationTable = {}, $preferredLanguage, $uses, $storageFactory, $storageKey = $STORAGE_KEY, $storagePrefix, $missingTranslationHandler, $asyncLoaders = [], NESTED_OBJECT_DELIMITER = '.';
+    var $translationTable = {}, $preferredLanguage, $uses, $storageFactory, $storageKey = $STORAGE_KEY, $storagePrefix, $missingTranslationHandlerFactory, $asyncLoaders = [], NESTED_OBJECT_DELIMITER = '.';
     var LoaderGenerator = {
         forUrl: function (url) {
           return [
@@ -155,12 +155,6 @@ angular.module('pascalprecht.translate').provider('$translate', [
       $storageKey = key;
     };
     this.storageKey = storageKey;
-    this.missingTranslationHandler = function (functionHandler) {
-      if (angular.isUndefined(functionHandler)) {
-        return $missingTranslationHandler;
-      }
-      $missingTranslationHandler = functionHandler;
-    };
     this.registerLoader = function (loader) {
       if (!loader) {
         throw new Error('Please define a valid loader!');
@@ -204,6 +198,12 @@ angular.module('pascalprecht.translate').provider('$translate', [
       }
       $storagePrefix = prefix;
     };
+    this.useMissingTranslationHandlerLog = function () {
+      this.useMissingTranslationHandler('$translateMissingTranslationHandlerLog');
+    };
+    this.useMissingTranslationHandler = function (factory) {
+      $missingTranslationHandlerFactory = factory;
+    };
     this.$get = [
       '$interpolate',
       '$log',
@@ -223,10 +223,8 @@ angular.module('pascalprecht.translate').provider('$translate', [
           if (translation) {
             return $interpolate(translation)(interpolateParams);
           }
-          if (!angular.isUndefined($missingTranslationHandler)) {
-            $missingTranslationHandler(translationId);
-          } else {
-            $log.warn('Translation for ' + translationId + ' doesn\'t exist');
+          if ($missingTranslationHandlerFactory) {
+            $injector.get($missingTranslationHandlerFactory)(translationId);
           }
           return translationId;
         };
@@ -345,5 +343,13 @@ angular.module('pascalprecht.translate').factory('$translateLocalStorage', [
       };
     var $translateLocalStorage = 'localStorage' in $window && $window.localStorage !== null ? localStorageAdapter : $translateCookieStorage;
     return $translateLocalStorage;
+  }
+]);
+angular.module('pascalprecht.translate').factory('$translateMissingTranslationHandlerLog', [
+  '$log',
+  function ($log) {
+    return function (translationId) {
+      $log.warn('Translation for ' + translationId + ' doesn\'t exist');
+    };
   }
 ]);
