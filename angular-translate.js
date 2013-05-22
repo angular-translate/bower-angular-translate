@@ -21,55 +21,7 @@ angular.module('pascalprecht.translate').constant('$STORAGE_KEY', 'NG_TRANSLATE_
 angular.module('pascalprecht.translate').provider('$translate', [
   '$STORAGE_KEY',
   function ($STORAGE_KEY) {
-    var $translationTable = {}, $preferredLanguage, $uses, $storageFactory, $storageKey = $STORAGE_KEY, $storagePrefix, $missingTranslationHandlerFactory, $asyncLoaders = [], NESTED_OBJECT_DELIMITER = '.';
-    var LoaderGenerator = {
-        forUrl: function (url) {
-          return [
-            '$http',
-            '$q',
-            function ($http, $q) {
-              return function (key) {
-                var deferred = $q.defer();
-                $http({
-                  url: url,
-                  params: { lang: key },
-                  method: 'GET'
-                }).success(function (data, status) {
-                  deferred.resolve(data);
-                }).error(function (data, status) {
-                  deferred.reject(key);
-                });
-                return deferred.promise;
-              };
-            }
-          ];
-        },
-        byStaticFiles: function (prefix, suffix) {
-          return [
-            '$http',
-            '$q',
-            function ($http, $q) {
-              return function (key) {
-                var deferred = $q.defer();
-                $http({
-                  url: [
-                    prefix,
-                    key,
-                    suffix
-                  ].join(''),
-                  method: 'GET',
-                  params: ''
-                }).success(function (data, status) {
-                  deferred.resolve(data);
-                }).error(function (data, status) {
-                  deferred.reject(key);
-                });
-                return deferred.promise;
-              };
-            }
-          ];
-        }
-      };
+    var $translationTable = {}, $preferredLanguage, $uses, $storageFactory, $storageKey = $STORAGE_KEY, $storagePrefix, $missingTranslationHandlerFactory, $loaderFactory, $loaderOptions, NESTED_OBJECT_DELIMITER = '.';
     var translations = function (langKey, translationTable) {
       if (!langKey && !translationTable) {
         return $translationTable;
@@ -108,25 +60,6 @@ angular.module('pascalprecht.translate').provider('$translate', [
       }
       return result;
     };
-    var invokeLoading = function ($injector, key) {
-      var deferred = $injector.get('$q').defer(), loaderFnBuilder = $asyncLoaders[0], loaderFn;
-      if (loaderFnBuilder) {
-        loaderFn = $injector.invoke(loaderFnBuilder);
-        if (angular.isFunction(loaderFn)) {
-          loaderFn(key).then(function (data) {
-            translations(key, data);
-            deferred.resolve(data);
-          }, function (key) {
-            deferred.reject(key);
-          });
-        } else {
-          deferred.reject(key);
-        }
-      } else {
-        deferred.reject(key);
-      }
-      return deferred.promise;
-    };
     this.translations = translations;
     this.preferredLanguage = function (langKey) {
       if (langKey) {
@@ -137,7 +70,7 @@ angular.module('pascalprecht.translate').provider('$translate', [
     };
     this.uses = function (langKey) {
       if (langKey) {
-        if (!$translationTable[langKey] && !$asyncLoaders.length) {
+        if (!$translationTable[langKey] && !$loaderFactory) {
           throw new Error('$translateProvider couldn\'t find translationTable for langKey: \'' + langKey + '\'');
         }
         $uses = langKey;
@@ -155,33 +88,15 @@ angular.module('pascalprecht.translate').provider('$translate', [
       $storageKey = key;
     };
     this.storageKey = storageKey;
-    this.registerLoader = function (loader) {
-      if (!loader) {
-        throw new Error('Please define a valid loader!');
-      }
-      var $loader;
-      if (!(angular.isFunction(loader) || angular.isArray(loader))) {
-        if (angular.isString(loader)) {
-          loader = {
-            type: 'url',
-            url: loader
-          };
-        }
-        switch (loader.type) {
-        case 'url':
-          $loader = LoaderGenerator.forUrl(loader.url);
-          break;
-        case 'static-files':
-          $loader = LoaderGenerator.byStaticFiles(loader.prefix, loader.suffix);
-          break;
-        }
-      } else {
-        $loader = loader;
-      }
-      $asyncLoaders.push($loader);
+    this.useUrlLoader = function (url) {
+      this.useLoader('$translateUrlLoader', { url: url });
     };
-    this.useLoaderFactory = function (loader) {
-      this.registerLoader(loader);
+    this.useStaticFilesLoader = function (options) {
+      this.useLoader('$translateStaticFilesLoader', options);
+    };
+    this.useLoader = function (loaderFactory, options) {
+      $loaderFactory = loaderFactory;
+      $loaderOptions = options;
     };
     this.useLocalStorage = function () {
       this.useStorage('$translateLocalStorage');
@@ -240,8 +155,9 @@ angular.module('pascalprecht.translate').provider('$translate', [
           }
           var deferred = $q.defer();
           if (!$translationTable[key]) {
-            invokeLoading($injector, key).then(function (data) {
+            $injector.get($loaderFactory)(angular.extend($loaderOptions, { key: key })).then(function (data) {
               $uses = key;
+              translations(key, data);
               if ($storageFactory) {
                 Storage.set($translate.storageKey(), $uses);
               }
@@ -264,7 +180,7 @@ angular.module('pascalprecht.translate').provider('$translate', [
         $translate.storageKey = function () {
           return storageKey();
         };
-        if ($asyncLoaders.length && angular.equals($translationTable, {})) {
+        if ($loaderFactory && angular.equals($translationTable, {})) {
           $translate.uses($translate.uses());
         }
         return $translate;
@@ -313,36 +229,6 @@ angular.module('pascalprecht.translate').filter('translate', [
       }
       return $translate(translationId, interpolateParams);
     };
-  }
-]);
-angular.module('pascalprecht.translate').factory('$translateCookieStorage', [
-  '$cookieStore',
-  function ($cookieStore) {
-    var $translateCookieStorage = {
-        get: function (name) {
-          return $cookieStore.get(name);
-        },
-        set: function (name, value) {
-          $cookieStore.put(name, value);
-        }
-      };
-    return $translateCookieStorage;
-  }
-]);
-angular.module('pascalprecht.translate').factory('$translateLocalStorage', [
-  '$window',
-  '$translateCookieStorage',
-  function ($window, $translateCookieStorage) {
-    var localStorageAdapter = {
-        get: function (name) {
-          return $window.localStorage.getItem(name);
-        },
-        set: function (name, value) {
-          $window.localStorage.setItem(name, value);
-        }
-      };
-    var $translateLocalStorage = 'localStorage' in $window && $window.localStorage !== null ? localStorageAdapter : $translateCookieStorage;
-    return $translateLocalStorage;
   }
 ]);
 angular.module('pascalprecht.translate').factory('$translateMissingTranslationHandlerLog', [
