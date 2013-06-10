@@ -21,7 +21,7 @@ angular.module('pascalprecht.translate').constant('$STORAGE_KEY', 'NG_TRANSLATE_
 angular.module('pascalprecht.translate').provider('$translate', [
   '$STORAGE_KEY',
   function ($STORAGE_KEY) {
-    var $translationTable = {}, $preferredLanguage, $uses, $storageFactory, $storageKey = $STORAGE_KEY, $storagePrefix, $missingTranslationHandlerFactory, $loaderFactory, $loaderOptions, NESTED_OBJECT_DELIMITER = '.';
+    var $translationTable = {}, $preferredLanguage, $fallbackLanguage, $uses, $storageFactory, $storageKey = $STORAGE_KEY, $storagePrefix, $missingTranslationHandlerFactory, $loaderFactory, $loaderOptions, NESTED_OBJECT_DELIMITER = '.';
     var translations = function (langKey, translationTable) {
       if (!langKey && !translationTable) {
         return $translationTable;
@@ -66,6 +66,13 @@ angular.module('pascalprecht.translate').provider('$translate', [
         $preferredLanguage = langKey;
       } else {
         return $preferredLanguage;
+      }
+    };
+    this.fallbackLanguage = function (langKey) {
+      if (langKey) {
+        $fallbackLanguage = langKey;
+      } else {
+        return $fallbackLanguage;
       }
     };
     this.uses = function (langKey) {
@@ -134,17 +141,26 @@ angular.module('pascalprecht.translate').provider('$translate', [
           }
         }
         var $translate = function (translationId, interpolateParams) {
-          var translation = $uses ? $translationTable[$uses] ? $translationTable[$uses][translationId] : translationId : $translationTable[translationId];
-          if (translation) {
-            return $interpolate(translation)(interpolateParams);
+          var table = $uses ? $translationTable[$uses] : $translationTable;
+          if (table && table.hasOwnProperty(translationId)) {
+            return $interpolate(table[translationId])(interpolateParams);
           }
           if ($missingTranslationHandlerFactory) {
             $injector.get($missingTranslationHandlerFactory)(translationId);
+          }
+          if ($uses && $fallbackLanguage && $uses !== $fallbackLanguage) {
+            var translation = $translationTable[$fallbackLanguage][translationId];
+            if (translation) {
+              return $interpolate(translation)(interpolateParams);
+            }
           }
           return translationId;
         };
         $translate.preferredLanguage = function () {
           return $preferredLanguage;
+        };
+        $translate.fallbackLanguage = function () {
+          return $fallbackLanguage;
         };
         $translate.storage = function () {
           return Storage;
@@ -156,8 +172,16 @@ angular.module('pascalprecht.translate').provider('$translate', [
           var deferred = $q.defer();
           if (!$translationTable[key]) {
             $injector.get($loaderFactory)(angular.extend($loaderOptions, { key: key })).then(function (data) {
+              var translationTable = {};
+              if (angular.isArray(data)) {
+                angular.forEach(data, function (table) {
+                  angular.extend(translationTable, table);
+                });
+              } else {
+                angular.extend(translationTable, data);
+              }
+              translations(key, translationTable);
               $uses = key;
-              translations(key, data);
               if ($storageFactory) {
                 Storage.set($translate.storageKey(), $uses);
               }
