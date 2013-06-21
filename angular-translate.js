@@ -103,7 +103,7 @@ angular.module('pascalprecht.translate').provider('$translate', [
     };
     this.useLoader = function (loaderFactory, options) {
       $loaderFactory = loaderFactory;
-      $loaderOptions = options;
+      $loaderOptions = options || {};
     };
     this.useLocalStorage = function () {
       this.useStorage('$translateLocalStorage');
@@ -133,7 +133,7 @@ angular.module('pascalprecht.translate').provider('$translate', [
       '$rootScope',
       '$q',
       function ($interpolate, $log, $injector, $rootScope, $q) {
-        var Storage;
+        var Storage, pendingLoader = false;
         if ($storageFactory) {
           Storage = $injector.get($storageFactory);
           if (!Storage.get || !Storage.set) {
@@ -145,7 +145,7 @@ angular.module('pascalprecht.translate').provider('$translate', [
           if (table && table.hasOwnProperty(translationId)) {
             return $interpolate(table[translationId])(interpolateParams);
           }
-          if ($missingTranslationHandlerFactory) {
+          if ($missingTranslationHandlerFactory && !pendingLoader) {
             $injector.get($missingTranslationHandlerFactory)(translationId);
           }
           if ($uses && $fallbackLanguage && $uses !== $fallbackLanguage) {
@@ -171,6 +171,7 @@ angular.module('pascalprecht.translate').provider('$translate', [
           }
           var deferred = $q.defer();
           if (!$translationTable[key]) {
+            pendingLoader = true;
             $injector.get($loaderFactory)(angular.extend($loaderOptions, { key: key })).then(function (data) {
               var translationTable = {};
               if (angular.isArray(data)) {
@@ -185,6 +186,7 @@ angular.module('pascalprecht.translate').provider('$translate', [
               if ($storageFactory) {
                 Storage.set($translate.storageKey(), $uses);
               }
+              pendingLoader = false;
               $rootScope.$broadcast('translationChangeSuccess');
               deferred.resolve($uses);
             }, function (key) {
