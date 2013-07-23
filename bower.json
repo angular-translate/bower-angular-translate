@@ -1,8 +1,9 @@
 {
   "name": "angular-translate",
-  "version": "0.9.4",
+  "version": "1.0.0",
   "main": "./angular-translate.js",
   "dependencies": {
-    "angular": "1.0.7"
+    "angular": "1.0.7",
+    "angular-translate-interpolation-default": "~0.1.1"
   }
 }
