@@ -298,11 +298,13 @@ angular.module('pascalprecht.translate').provider('$translate', [
         $translate.storageKey = function () {
           return storageKey();
         };
-        if ($loaderFactory && angular.equals($translationTable, {})) {
-          $translate.uses($translate.uses());
-        }
-        if ($fallbackLanguage && !$translationTable[$fallbackLanguage]) {
-          loadAsync($fallbackLanguage);
+        if ($loaderFactory) {
+          if (angular.equals($translationTable, {})) {
+            $translate.uses($translate.uses());
+          }
+          if ($fallbackLanguage && !$translationTable[$fallbackLanguage]) {
+            loadAsync($fallbackLanguage);
+          }
         }
         return $translate;
       }
