@@ -284,7 +284,7 @@ angular.module('pascalprecht.translate').provider('$translate', [
             deferred.resolve(key);
             $rootScope.$broadcast('$translateChangeEnd');
           }
-          if (!$translationTable[key]) {
+          if (!$translationTable[key] && $loaderFactory) {
             loadAsync(key).then(useLanguage, function (key) {
               $rootScope.$broadcast('$translateChangeError');
               deferred.reject(key);
