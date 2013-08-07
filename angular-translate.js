@@ -1,3 +1,8 @@
+/**
+ * angular-translate - v1.0.2 - 2013-08-07
+ * http://github.com/PascalPrecht/angular-translate
+ * Copyright (c) 2013 ; Licensed 
+ */
 angular.module('pascalprecht.translate', ['ng']).run([
   '$translate',
   function ($translate) {
@@ -12,13 +17,8 @@ angular.module('pascalprecht.translate', ['ng']).run([
       } else {
         $translate.uses(storage.get(key));
       }
-    } else {
-      if (angular.isString($translate.fallbackLanguage()) && $translate.fallbackLanguage() !== $translate.preferredLanguage()) {
-        $translate.load($translate.fallbackLanguage());
-      }
-      if (angular.isString($translate.preferredLanguage())) {
-        $translate.uses($translate.preferredLanguage());
-      }
+    } else if (angular.isString($translate.preferredLanguage())) {
+      $translate.uses($translate.preferredLanguage());
     }
   }
 ]);
@@ -178,8 +178,36 @@ angular.module('pascalprecht.translate').provider('$translate', [
       '$rootScope',
       '$q',
       function ($log, $injector, $rootScope, $q) {
-        var Storage, defaultInterpolator = $injector.get($interpolationFactory || '$translateDefaultInterpolation');
-        pendingLoader = false, interpolatorHashMap = {};
+        var Storage, defaultInterpolator = $injector.get($interpolationFactory || '$translateDefaultInterpolation'), pendingLoader = false, interpolatorHashMap = {};
+        var loadAsync = function (key) {
+          if (!key) {
+            throw 'No language key specified for loading.';
+          }
+          var deferred = $q.defer();
+          $rootScope.$broadcast('$translateLoadingStart');
+          pendingLoader = true;
+          $nextLang = key;
+          $injector.get($loaderFactory)(angular.extend($loaderOptions, { key: key })).then(function (data) {
+            $rootScope.$broadcast('$translateLoadingSuccess');
+            var translationTable = {};
+            if (angular.isArray(data)) {
+              angular.forEach(data, function (table) {
+                angular.extend(translationTable, table);
+              });
+            } else {
+              angular.extend(translationTable, data);
+            }
+            translations(key, translationTable);
+            pendingLoader = false;
+            deferred.resolve(key);
+            $rootScope.$broadcast('$translateLoadingEnd');
+          }, function (key) {
+            $rootScope.$broadcast('$translateLoadingError');
+            deferred.reject(key);
+            $rootScope.$broadcast('$translateLoadingEnd');
+          });
+          return deferred.promise;
+        };
         if ($storageFactory) {
           Storage = $injector.get($storageFactory);
           if (!Storage.get || !Storage.set) {
@@ -241,8 +269,11 @@ angular.module('pascalprecht.translate').provider('$translate', [
           if (!key) {
             return $uses;
           }
-          var success = function () {
+          var deferred = $q.defer();
+          $rootScope.$broadcast('$translateChangeStart');
+          function useLanguage(key) {
             $uses = key;
+            $rootScope.$broadcast('$translateChangeSuccess');
             if ($storageFactory) {
               Storage.set($translate.storageKey(), $uses);
             }
@@ -250,48 +281,18 @@ angular.module('pascalprecht.translate').provider('$translate', [
             angular.forEach(interpolatorHashMap, function (interpolator, id) {
               interpolatorHashMap[id].setLocale($uses);
             });
-            $rootScope.$broadcast('translationChangeSuccess');
-          };
-          var error = function () {
-            $rootScope.$broadcast('translationChangeError');
-          };
-          return $translate.load(key, success, error);
-        };
-        $translate.load = function (key, success, error) {
-          if (!key) {
-            throw 'No language key specified for loading.';
+            deferred.resolve(key);
+            $rootScope.$broadcast('$translateChangeEnd');
           }
-          var deferred = $q.defer();
           if (!$translationTable[key]) {
-            pendingLoader = true;
-            $nextLang = key;
-            $injector.get($loaderFactory)(angular.extend($loaderOptions, { key: key })).then(function (data) {
-              var translationTable = {};
-              if (angular.isArray(data)) {
-                angular.forEach(data, function (table) {
-                  angular.extend(translationTable, table);
-                });
-              } else {
-                angular.extend(translationTable, data);
-              }
-              translations(key, translationTable);
-              if (angular.isFunction(success)) {
-                success();
-              }
-              pendingLoader = false;
-              deferred.resolve(key);
-            }, function (key) {
-              if (angular.isFunction(error)) {
-                error();
-              }
+            loadAsync(key).then(useLanguage, function (key) {
+              $rootScope.$broadcast('$translateChangeError');
               deferred.reject(key);
+              $rootScope.$broadcast('$translateChangeEnd');
             });
-            return deferred.promise;
+          } else {
+            useLanguage(key);
           }
-          if (angular.isFunction(success)) {
-            success();
-          }
-          deferred.resolve(key);
           return deferred.promise;
         };
         $translate.storageKey = function () {
@@ -299,6 +300,9 @@ angular.module('pascalprecht.translate').provider('$translate', [
         };
         if ($loaderFactory && angular.equals($translationTable, {})) {
           $translate.uses($translate.uses());
+        }
+        if ($fallbackLanguage && !$translationTable[$fallbackLanguage]) {
+          loadAsync($fallbackLanguage);
         }
         return $translate;
       }
@@ -311,14 +315,14 @@ angular.module('pascalprecht.translate').directive('translate', [
   function ($filter, $interpolate) {
     var translate = $filter('translate');
     return {
-      restrict: 'A',
+      restrict: 'AE',
       scope: true,
       link: function linkFn(scope, element, attr) {
         if (attr.translateInterpolation) {
           scope.interpolation = attr.translateInterpolation;
         }
         attr.$observe('translate', function (translationId) {
-          if (angular.equals(translationId, '')) {
+          if (angular.equals(translationId, '') || translationId === undefined) {
             scope.translationId = $interpolate(element.text().replace(/^\s+|\s+$/g, ''))(scope.$parent);
           } else {
             scope.translationId = translationId;
@@ -327,7 +331,7 @@ angular.module('pascalprecht.translate').directive('translate', [
         attr.$observe('translateValues', function (interpolateParams) {
           scope.interpolateParams = interpolateParams;
         });
-        scope.$on('translationChangeSuccess', function () {
+        scope.$on('$translateChangeSuccess', function () {
           element.html(translate(scope.translationId, scope.interpolateParams, scope.interpolation));
         });
         scope.$watch('translationId + interpolateParams', function (nValue) {
