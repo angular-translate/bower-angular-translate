@@ -1,5 +1,5 @@
 /**
- * angular-translate - v1.0.2 - 2013-08-07
+ * angular-translate - v1.1.0 - 2013-09-02
  * http://github.com/PascalPrecht/angular-translate
  * Copyright (c) 2013 ; Licensed 
  */
@@ -22,23 +22,6 @@ angular.module('pascalprecht.translate', ['ng']).run([
     }
   }
 ]);
-angular.module('pascalprecht.translate').constant('$STORAGE_KEY', 'NG_TRANSLATE_LANG_KEY');
-angular.module('pascalprecht.translate').factory('$translateDefaultInterpolation', [
-  '$interpolate',
-  function ($interpolate) {
-    var $translateInterpolator = {}, $locale, $identifier = 'default';
-    $translateInterpolator.setLocale = function (locale) {
-      $locale = locale;
-    };
-    $translateInterpolator.getInterpolationIdentifier = function () {
-      return $identifier;
-    };
-    $translateInterpolator.interpolate = function (string, interpolateParams) {
-      return $interpolate(string)(interpolateParams);
-    };
-    return $translateInterpolator;
-  }
-]);
 angular.module('pascalprecht.translate').provider('$translate', [
   '$STORAGE_KEY',
   function ($STORAGE_KEY) {
@@ -59,6 +42,7 @@ angular.module('pascalprecht.translate').provider('$translate', [
         }
         angular.extend($translationTable[langKey], flatObject(translationTable));
       }
+      return this;
     };
     var flatObject = function (data, path, result) {
       var key, keyWithPath, val;
@@ -84,16 +68,19 @@ angular.module('pascalprecht.translate').provider('$translate', [
     this.translations = translations;
     this.addInterpolation = function (factory) {
       $interpolatorFactories.push(factory);
+      return this;
     };
     this.useMessageFormatInterpolation = function () {
-      this.useInterpolation('$translateMessageFormatInterpolation');
+      return this.useInterpolation('$translateMessageFormatInterpolation');
     };
     this.useInterpolation = function (factory) {
       $interpolationFactory = factory;
+      return this;
     };
     this.preferredLanguage = function (langKey) {
       if (langKey) {
         $preferredLanguage = langKey;
+        return this;
       } else {
         return $preferredLanguage;
       }
@@ -101,22 +88,26 @@ angular.module('pascalprecht.translate').provider('$translate', [
     this.translationNotFoundIndicator = function (indicator) {
       this.translationNotFoundIndicatorLeft(indicator);
       this.translationNotFoundIndicatorRight(indicator);
+      return this;
     };
     this.translationNotFoundIndicatorLeft = function (indicator) {
       if (!indicator) {
         return $notFoundIndicatorLeft;
       }
       $notFoundIndicatorLeft = indicator;
+      return this;
     };
     this.translationNotFoundIndicatorRight = function (indicator) {
       if (!indicator) {
         return $notFoundIndicatorRight;
       }
       $notFoundIndicatorRight = indicator;
+      return this;
     };
     this.fallbackLanguage = function (langKey) {
       if (langKey) {
         $fallbackLanguage = langKey;
+        return this;
       } else {
         return $fallbackLanguage;
       }
@@ -127,6 +118,7 @@ angular.module('pascalprecht.translate').provider('$translate', [
           throw new Error('$translateProvider couldn\'t find translationTable for langKey: \'' + langKey + '\'');
         }
         $uses = langKey;
+        return this;
       } else {
         return $uses;
       }
@@ -142,35 +134,39 @@ angular.module('pascalprecht.translate').provider('$translate', [
     };
     this.storageKey = storageKey;
     this.useUrlLoader = function (url) {
-      this.useLoader('$translateUrlLoader', { url: url });
+      return this.useLoader('$translateUrlLoader', { url: url });
     };
     this.useStaticFilesLoader = function (options) {
-      this.useLoader('$translateStaticFilesLoader', options);
+      return this.useLoader('$translateStaticFilesLoader', options);
     };
     this.useLoader = function (loaderFactory, options) {
       $loaderFactory = loaderFactory;
       $loaderOptions = options || {};
+      return this;
     };
     this.useLocalStorage = function () {
-      this.useStorage('$translateLocalStorage');
+      return this.useStorage('$translateLocalStorage');
     };
     this.useCookieStorage = function () {
-      this.useStorage('$translateCookieStorage');
+      return this.useStorage('$translateCookieStorage');
     };
     this.useStorage = function (storageFactory) {
       $storageFactory = storageFactory;
+      return this;
     };
     this.storagePrefix = function (prefix) {
       if (!prefix) {
         return prefix;
       }
       $storagePrefix = prefix;
+      return this;
     };
     this.useMissingTranslationHandlerLog = function () {
-      this.useMissingTranslationHandler('$translateMissingTranslationHandlerLog');
+      return this.useMissingTranslationHandler('$translateMissingTranslationHandlerLog');
     };
     this.useMissingTranslationHandler = function (factory) {
       $missingTranslationHandlerFactory = factory;
+      return this;
     };
     this.$get = [
       '$log',
@@ -199,11 +195,13 @@ angular.module('pascalprecht.translate').provider('$translate', [
             }
             translations(key, translationTable);
             pendingLoader = false;
+            $nextLang = undefined;
             deferred.resolve(key);
             $rootScope.$broadcast('$translateLoadingEnd');
           }, function (key) {
             $rootScope.$broadcast('$translateLoadingError');
             deferred.reject(key);
+            $nextLang = undefined;
             $rootScope.$broadcast('$translateLoadingEnd');
           });
           return deferred.promise;
@@ -298,6 +296,51 @@ angular.module('pascalprecht.translate').provider('$translate', [
         $translate.storageKey = function () {
           return storageKey();
         };
+        $translate.refresh = function (langKey) {
+          var deferred = $q.defer();
+          function onLoadSuccess() {
+            deferred.resolve();
+            $rootScope.$broadcast('$translateRefreshEnd');
+          }
+          function onLoadFailure() {
+            deferred.reject();
+            $rootScope.$broadcast('$translateRefreshEnd');
+          }
+          if (!$loaderFactory) {
+            throw new Error('Couldn\'t refresh translation table, no loader registered!');
+          }
+          if (!langKey) {
+            $rootScope.$broadcast('$translateRefreshStart');
+            for (var lang in $translationTable) {
+              if ($translationTable.hasOwnProperty(lang)) {
+                delete $translationTable[lang];
+              }
+            }
+            var loaders = [];
+            if ($fallbackLanguage) {
+              loaders.push(loadAsync($fallbackLanguage));
+            }
+            if ($uses) {
+              loaders.push($translate.uses($uses));
+            }
+            if (loaders.length > 0) {
+              $q.all(loaders).then(onLoadSuccess, onLoadFailure);
+            } else
+              onLoadSuccess();
+          } else if ($translationTable.hasOwnProperty(langKey)) {
+            $rootScope.$broadcast('$translateRefreshStart');
+            delete $translationTable[langKey];
+            var loader = null;
+            if (langKey === $uses) {
+              loader = $translate.uses($uses);
+            } else {
+              loader = loadAsync(langKey);
+            }
+            loader.then(onLoadSuccess, onLoadFailure);
+          } else
+            deferred.reject();
+          return deferred.promise;
+        };
         if ($loaderFactory) {
           if (angular.equals($translationTable, {})) {
             $translate.uses($translate.uses());
@@ -309,6 +352,22 @@ angular.module('pascalprecht.translate').provider('$translate', [
         return $translate;
       }
     ];
+  }
+]);
+angular.module('pascalprecht.translate').factory('$translateDefaultInterpolation', [
+  '$interpolate',
+  function ($interpolate) {
+    var $translateInterpolator = {}, $locale, $identifier = 'default';
+    $translateInterpolator.setLocale = function (locale) {
+      $locale = locale;
+    };
+    $translateInterpolator.getInterpolationIdentifier = function () {
+      return $identifier;
+    };
+    $translateInterpolator.interpolate = function (string, interpolateParams) {
+      return $interpolate(string)(interpolateParams);
+    };
+    return $translateInterpolator;
   }
 ]);
 angular.module('pascalprecht.translate').directive('translate', [
