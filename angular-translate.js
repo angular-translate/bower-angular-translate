@@ -370,6 +370,7 @@ angular.module('pascalprecht.translate').factory('$translateDefaultInterpolation
     return $translateInterpolator;
   }
 ]);
+angular.module('pascalprecht.translate').constant('$STORAGE_KEY', 'NG_TRANSLATE_LANG_KEY');
 angular.module('pascalprecht.translate').directive('translate', [
   '$filter',
   '$interpolate',
