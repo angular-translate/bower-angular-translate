@@ -1,5 +1,5 @@
 /**
- * angular-translate - v1.1.1 - 2014-02-12
+ * angular-translate - v1.1.1 - 2014-02-15
  * http://github.com/PascalPrecht/angular-translate
  * Copyright (c) 2014 ; Licensed 
  */
@@ -259,10 +259,13 @@ angular.module('pascalprecht.translate').provider('$translate', [
               var promise = $preferredLanguage ? langPromises[$preferredLanguage] : langPromises[$uses];
               fallbackIndex = 0;
               if ($storageFactory && !promise) {
-                var langKey = Storage.get($storageKey), index = indexOf($fallbackLanguage, langKey);
+                var langKey = Storage.get($storageKey);
                 promise = langPromises[langKey];
-                fallbackIndex = index > -1 ? index += 1 : 0;
-                $fallbackLanguage.push($preferredLanguage);
+                if ($fallbackLanguage && $fallbackLanguage.length) {
+                  var index = indexOf($fallbackLanguage, langKey);
+                  fallbackIndex = index > -1 ? index += 1 : 0;
+                  $fallbackLanguage.push($preferredLanguage);
+                }
               }
               return promise;
             }();
