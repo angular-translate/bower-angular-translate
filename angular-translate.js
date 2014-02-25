@@ -1,5 +1,5 @@
 /**
- * angular-translate - v2.0.0 - 2014-02-16
+ * angular-translate - v2.0.1 - 2014-02-25
  * http://github.com/PascalPrecht/angular-translate
  * Copyright (c) 2014 ; Licensed 
  */
@@ -530,10 +530,12 @@ angular.module('pascalprecht.translate').provider('$translate', [
           if (!$translationTable[key] && $loaderFactory) {
             $nextLang = key;
             langPromises[key] = loadAsync(key).then(function (translation) {
-              $nextLang = undefined;
               translations(translation.key, translation.table);
               deferred.resolve(translation.key);
-              useLanguage(translation.key);
+              if ($nextLang === key) {
+                useLanguage(translation.key);
+                $nextLang = undefined;
+              }
             }, function (key) {
               $nextLang = undefined;
               $rootScope.$emit('$translateChangeError');
@@ -583,6 +585,9 @@ angular.module('pascalprecht.translate').provider('$translate', [
                 }
                 translations(data.key, data.table);
               });
+              if ($uses) {
+                useLanguage($uses);
+              }
               resolve();
             });
           } else if ($translationTable[langKey]) {
@@ -599,6 +604,9 @@ angular.module('pascalprecht.translate').provider('$translate', [
           return deferred.promise;
         };
         $translate.instant = function (translationId, interpolateParams, interpolationId) {
+          if (typeof translationId === 'undefined' || translationId === '') {
+            return translationId;
+          }
           translationId = translationId.trim();
           var result, possibleLangKeys = [];
           if ($preferredLanguage) {
@@ -617,9 +625,15 @@ angular.module('pascalprecht.translate').provider('$translate', [
                 result = determineTranslationInstant(translationId, interpolateParams, interpolationId);
               }
             }
+            if (typeof result !== 'undefined') {
+              break;
+            }
           }
           if (!result) {
             result = translationId;
+            if ($missingTranslationHandlerFactory && !pendingLoader) {
+              $injector.get($missingTranslationHandlerFactory)(translationId, $uses);
+            }
           }
           return result;
         };
