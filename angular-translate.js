@@ -1,5 +1,5 @@
 /*!
- * angular-translate - v2.4.0 - 2014-09-22
+ * angular-translate - v2.4.1 - 2014-10-03
  * http://github.com/PascalPrecht/angular-translate
  * Copyright (c) 2014 ; Licensed MIT
  */
@@ -26,7 +26,7 @@ angular.module('pascalprecht.translate').provider('$translate', [
   '$STORAGE_KEY',
   function ($STORAGE_KEY) {
     var $translationTable = {}, $preferredLanguage, $availableLanguageKeys = [], $languageKeyAliases, $fallbackLanguage, $fallbackWasString, $uses, $nextLang, $storageFactory, $storageKey = $STORAGE_KEY, $storagePrefix, $missingTranslationHandlerFactory, $interpolationFactory, $interpolatorFactories = [], $interpolationSanitizationStrategy = false, $loaderFactory, $cloakClassName = 'translate-cloak', $loaderOptions, $notFoundIndicatorLeft, $notFoundIndicatorRight, $postCompilingEnabled = false, NESTED_OBJECT_DELIMITER = '.', loaderCache;
-    var version = '2.4.0';
+    var version = '2.4.1';
     var getLocale = function () {
       var nav = window.navigator;
       return ((angular.isArray(nav.languages) ? nav.languages[0] : nav.language || nav.browserLanguage || nav.systemLanguage || nav.userLanguage) || '').split('-').join('_');
@@ -211,8 +211,8 @@ angular.module('pascalprecht.translate').provider('$translate', [
       $storageKey = key;
     };
     this.storageKey = storageKey;
-    this.useUrlLoader = function (url) {
-      return this.useLoader('$translateUrlLoader', { url: url });
+    this.useUrlLoader = function (url, options) {
+      return this.useLoader('$translateUrlLoader', angular.extend({ url: url }, options));
     };
     this.useStaticFilesLoader = function (options) {
       return this.useLoader('$translateStaticFilesLoader', options);
@@ -381,10 +381,11 @@ angular.module('pascalprecht.translate').provider('$translate', [
           if (typeof cache === 'string') {
             cache = $injector.get(cache);
           }
-          $injector.get($loaderFactory)(angular.extend($loaderOptions, {
-            key: key,
-            $http: angular.extend({}, $loaderOptions.$http, { cache: cache })
-          })).then(function (data) {
+          var loaderOptions = angular.extend({}, $loaderOptions, {
+              key: key,
+              $http: angular.extend({}, { cache: cache }, $loaderOptions.$http)
+            });
+          $injector.get($loaderFactory)(loaderOptions).then(function (data) {
             var translationTable = {};
             $rootScope.$emit('$translateLoadingSuccess', { language: key });
             if (angular.isArray(data)) {
@@ -752,6 +753,7 @@ angular.module('pascalprecht.translate').provider('$translate', [
           if ($fallbackLanguage && $fallbackLanguage.length) {
             var processAsyncResult = function (translation) {
               translations(translation.key, translation.table);
+              $rootScope.$emit('$translateChangeEnd', { language: translation.key });
             };
             for (var i = 0, len = $fallbackLanguage.length; i < len; i++) {
               langPromises[$fallbackLanguage[i]] = loadAsync($fallbackLanguage[i]).then(processAsyncResult);
