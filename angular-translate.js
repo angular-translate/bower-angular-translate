@@ -1,5 +1,5 @@
 /*!
- * angular-translate - v2.6.0 - 2015-02-08
+ * angular-translate - v2.6.1 - 2015-03-01
  * http://github.com/angular-translate/angular-translate
  * Copyright (c) 2015 ; Licensed MIT
  */
@@ -75,7 +75,7 @@ angular.module('pascalprecht.translate').provider('$translate', ['$STORAGE_KEY',
       loaderCache,
       directivePriority = 0;
 
-  var version = '2.6.0';
+  var version = '2.6.1';
 
   // tries to determine the browsers language
   var getFirstBrowserLanguage = function () {
@@ -1360,7 +1360,12 @@ angular.module('pascalprecht.translate').provider('$translate', ['$STORAGE_KEY',
       var determineTranslationInstant = function (translationId, interpolateParams, interpolationId) {
 
         var result, table = $uses ? $translationTable[$uses] : $translationTable,
-            Interpolator = (interpolationId) ? interpolatorHashMap[interpolationId] : defaultInterpolator;
+            Interpolator = defaultInterpolator;
+
+        // if the interpolation id exists use custom interpolator
+        if (interpolatorHashMap && Object.prototype.hasOwnProperty.call(interpolatorHashMap, interpolationId)) {
+          Interpolator = interpolatorHashMap[interpolationId];
+        }
 
         // if the translation id exists, we can just interpolate it
         if (table && Object.prototype.hasOwnProperty.call(table, translationId)) {
