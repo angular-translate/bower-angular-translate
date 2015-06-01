@@ -1,5 +1,5 @@
 /*!
- * angular-translate - v2.7.1 - 2015-06-01
+ * angular-translate - v2.7.2 - 2015-06-01
  * http://github.com/angular-translate/angular-translate
  * Copyright (c) 2015 ; Licensed MIT
  */
@@ -280,7 +280,9 @@ function $translateSanitizationProvider () {
   }];
 
   var htmlEscapeValue = function (value) {
-    return angular.element('<div></div>').text(value).html();
+    var element = angular.element('<div></div>');
+    element.text(value); // not chainable, see #1044
+    return element.html();
   };
 
   var htmlSanitizeValue = function (value) {
@@ -366,7 +368,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         }
       };
 
-  var version = '2.7.1';
+  var version = '2.7.2';
 
   // tries to determine the browsers language
   var getFirstBrowserLanguage = function () {
@@ -841,6 +843,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
       return $storageKey;
     }
     $storageKey = key;
+    return this;
   };
 
   this.storageKey = storageKey;
@@ -2150,7 +2153,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           };
           allTranslationsLoaded.displayName = 'refreshPostProcessor';
 
-          $q.all(tables).then(allTranslationsLoaded);
+          $q.all(tables).then(allTranslationsLoaded, reject);
 
         } else if ($translationTable[langKey]) {
 
@@ -2722,6 +2725,9 @@ function translateDirective($translate, $q, $interpolate, $compile, $parse, $roo
           } else {
             observeElementTranslation('');
           }
+        } else if (iAttr.translate) {
+          // ensure attribute will be not skipped
+          observeElementTranslation(iAttr.translate);
         }
         updateTranslations();
         scope.$on('$destroy', unbind);
