@@ -5,12 +5,7 @@
   "main": "./angular-translate.js",
   "ignore": [],
   "author": "Pascal Precht",
-  "licenses": [
-    {
-      "type": "MIT",
-      "url": "http://www.opensource.org/licenses/MIT"
-    }
-  ],
+  "license": "MIT",
   "dependencies": {
     "angular": ">=1.2.26 <=1.5"
   }
