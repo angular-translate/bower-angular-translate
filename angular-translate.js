@@ -1,5 +1,5 @@
 /*!
- * angular-translate - v2.8.0 - 2015-09-18
+ * angular-translate - v2.8.1 - 2015-10-01
  * 
  * Copyright (c) 2015 The angular-translate team, Pascal Precht; Licensed MIT
  */
@@ -381,7 +381,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         }
       };
 
-  var version = '2.8.0';
+  var version = '2.8.1';
 
   // tries to determine the browsers language
   var getFirstBrowserLanguage = function () {
@@ -1310,8 +1310,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           interpolatorHashMap = {},
           langPromises = {},
           fallbackIndex,
-          startFallbackIteration,
-          abortLoader;
+          startFallbackIteration;
 
       var $translate = function (translationId, interpolateParams, interpolationId, defaultTranslationText) {
 
@@ -1487,16 +1486,10 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           cache = $injector.get(cache);
         }
 
-        if (pendingLoader && abortLoader) {
-          abortLoader.resolve();
-        }
-        abortLoader = $q.defer();
-
         var loaderOptions = angular.extend({}, $loaderOptions, {
           key: key,
           $http: angular.extend({}, {
-            cache: cache,
-            timeout: abortLoader.promise
+            cache: cache
           }, $loaderOptions.$http)
         });
 
@@ -2066,7 +2059,9 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           langPromises[key] = loadAsync(key).then(function (translation) {
             translations(translation.key, translation.table);
             deferred.resolve(translation.key);
-            useLanguage(translation.key);
+            if ($nextLang === key) {
+              useLanguage(translation.key);
+            }
             return translation;
           }, function (key) {
             $rootScope.$emit('$translateChangeError', {language: key});
@@ -2372,6 +2367,9 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
       };
 
       var $onReadyDeferred = $q.defer();
+      $onReadyDeferred.promise.then(function () {
+        $isReady = true;
+      });
 
       /**
        * @ngdoc function
@@ -2394,9 +2392,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         if ($isReady) {
           deferred.resolve();
         } else {
-          $onReadyDeferred.promise.then(function () {
-            deferred.resolve();
-          });
+          $onReadyDeferred.promise.then(deferred.resolve);
         }
         return deferred.promise;
       };
