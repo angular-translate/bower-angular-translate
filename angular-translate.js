@@ -1,5 +1,5 @@
 /*!
- * angular-translate - v2.9.0 - 2016-01-24
+ * angular-translate - v2.9.1 - 2016-02-13
  * 
  * Copyright (c) 2016 The angular-translate team, Pascal Precht; Licensed MIT
  */
@@ -381,7 +381,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         }
       };
 
-  var version = '2.9.0';
+  var version = '2.9.1';
 
   // tries to determine the browsers language
   var getFirstBrowserLanguage = function () {
