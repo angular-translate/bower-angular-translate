@@ -1,5 +1,5 @@
 /*!
- * angular-translate - v2.9.2 - 2016-02-21
+ * angular-translate - v2.10.0 - 2016-02-28
  * 
  * Copyright (c) 2016 The angular-translate team, Pascal Precht; Licensed MIT
  */
@@ -391,7 +391,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         }
       };
 
-  var version = '2.9.2';
+  var version = '2.10.0';
 
   // tries to determine the browsers language
   var getFirstBrowserLanguage = function () {
@@ -2091,8 +2091,8 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
 
         // if there isn't a translation table for the language we've requested,
         // we load it asynchronously
+        $nextLang = key;
         if (($forceAsyncReloadEnabled || !$translationTable[key]) && $loaderFactory && !langPromises[key]) {
-          $nextLang = key;
           langPromises[key] = loadAsync(key).then(function (translation) {
             translations(translation.key, translation.table);
             deferred.resolve(translation.key);
@@ -2113,7 +2113,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           // we are already loading this asynchronously
           // resolve our new deferred when the old langPromise is resolved
           langPromises[key].then(function (translation) {
-            if (!$uses) {
+            if ($nextLang === translation.key) {
               useLanguage(translation.key);
             }
             deferred.resolve(translation.key);
