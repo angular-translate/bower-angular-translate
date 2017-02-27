@@ -1,5 +1,5 @@
 /*!
- * angular-translate - v2.14.0 - 2017-02-11
+ * angular-translate - v2.15.0 - 2017-02-27
  * 
  * Copyright (c) 2017 The angular-translate team, Pascal Precht; Licensed MIT
  */
@@ -448,7 +448,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
       }
     };
 
-  var version = '2.14.0';
+  var version = '2.15.0';
 
   // tries to determine the browsers language
   var getFirstBrowserLanguage = function () {
@@ -2655,7 +2655,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
      * @methodOf pascalprecht.translate.$translate
      *
      * @description
-     * Returns whether the service is "ready" to translate (i.e. loading 1st language).
+     * Calls the function provided or resolved the returned promise after the service is "ready" to translate (i.e. loading 1st language).
      *
      * See also {@link pascalprecht.translate.$translate#methods_isReady isReady()}.
      *
@@ -2838,15 +2838,15 @@ function $translateDefaultInterpolation ($interpolate, $translateSanitization) {
    *
    * Since AngularJS 1.5, `value` must not be a string but can be anything input.
    *
-   * @param value translation
-   * @param interpolationParams interpolation params
-   * @param context current context (filter, directive, service)
-   * @param sanitizeStrategy sanitize strategy
-   * @param translationId current translationId
+   * @param {string} value translation
+   * @param {object} interpolationParams interpolation params
+   * @param {string} context current context (filter, directive, service)
+   * @param {string} sanitizeStrategy sanitize strategy
+   * @param {string} translationId current translationId
    *
    * @returns {string} interpolated string
    */
-  $translateInterpolator.interpolate = function (value, interpolationParams, context, sanitizeStrategy/*, translationId*/) {
+  $translateInterpolator.interpolate = function (value, interpolationParams, context, sanitizeStrategy, translationId) { // jshint ignore:line
     interpolationParams = interpolationParams || {};
     interpolationParams = $translateSanitization.sanitize(interpolationParams, 'params', sanitizeStrategy, context);
 
@@ -3660,7 +3660,10 @@ function translateFilterFactory($parse, $translate) {
 
   var translateFilter = function (translationId, interpolateParams, interpolation, forceLanguage) {
     if (!angular.isObject(interpolateParams)) {
-      interpolateParams = $parse(interpolateParams)(this);
+      var ctx = this || {
+        '__SCOPE_IS_NOT_AVAILABLE': 'More info at https://github.com/angular/angular.js/commit/8863b9d04c722b278fa93c5d66ad1e578ad6eb1f'
+        };
+      interpolateParams = $parse(interpolateParams)(ctx);
     }
 
     return $translate.instant(translationId, interpolateParams, interpolation, forceLanguage);
