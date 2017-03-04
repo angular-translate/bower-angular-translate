@@ -1,5 +1,5 @@
 /*!
- * angular-translate - v2.15.0 - 2017-02-27
+ * angular-translate - v2.15.1 - 2017-03-04
  * 
  * Copyright (c) 2017 The angular-translate team, Pascal Precht; Licensed MIT
  */
@@ -31,7 +31,7 @@ $translate.$inject = ['$STORAGE_KEY', '$windowProvider', '$translateSanitization
 $translateDefaultInterpolation.$inject = ['$interpolate', '$translateSanitization'];
 translateDirective.$inject = ['$translate', '$interpolate', '$compile', '$parse', '$rootScope'];
 translateAttrDirective.$inject = ['$translate', '$rootScope'];
-translateCloakDirective.$inject = ['$translate'];
+translateCloakDirective.$inject = ['$translate', '$rootScope'];
 translateFilterFactory.$inject = ['$parse', '$translate'];
 $translationCache.$inject = ['$cacheFactory'];
 angular.module('pascalprecht.translate', ['ng'])
@@ -448,7 +448,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
       }
     };
 
-  var version = '2.15.0';
+  var version = '2.15.1';
 
   // tries to determine the browsers language
   var getFirstBrowserLanguage = function () {
@@ -3403,7 +3403,7 @@ angular.module('pascalprecht.translate')
  */
 .directive('translateCloak', translateCloakDirective);
 
-function translateCloakDirective($translate) {
+function translateCloakDirective($translate, $rootScope) {
 
   'use strict';
 
@@ -3425,8 +3425,10 @@ function translateCloakDirective($translate) {
           iAttr.$observe('translateCloak', function (translationId) {
             $translate(translationId).then(iRemoveCloak, iApplyCloak);
           });
-        }
-        else {
+          $rootScope.$on('$translateChangeSuccess', function () {
+            $translate(iAttr.translateCloak).then(iRemoveCloak, iApplyCloak);
+          });
+        } else {
           $translate.onReady(iRemoveCloak);
         }
       };
