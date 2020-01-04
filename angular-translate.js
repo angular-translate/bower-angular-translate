@@ -1,7 +1,7 @@
 /*!
- * angular-translate - v2.18.1 - 2018-05-19
+ * angular-translate - v2.18.2 - 2020-01-04
  * 
- * Copyright (c) 2018 The angular-translate team, Pascal Precht; Licensed MIT
+ * Copyright (c) 2020 The angular-translate team, Pascal Precht; Licensed MIT
  */
 (function (root, factory) {
   if (typeof define === 'function' && define.amd) {
@@ -472,7 +472,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
       }
     };
 
-  var version = '2.18.1';
+  var version = '2.18.2';
 
   // tries to determine the browsers language
   var getFirstBrowserLanguage = function () {
@@ -1530,6 +1530,8 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
       // trim off any whitespace
       if (translationId) {
         translationId = trim.apply(translationId);
+      } else {
+        throw new TypeError('translationId must be a not empty string');
       }
 
       var promiseToWaitFor = (function () {
@@ -3097,7 +3099,7 @@ function translateDirective($translate, $interpolate, $compile, $parse, $rootSco
           }
 
           if (angular.equals(translationId , '') || !angular.isDefined(translationId)) {
-            var iElementText = trim.apply(iElement.text());
+            var iElementText = trim.apply(iElement.text()).replace(/\n/g, ' ');
 
             // Resolve translation id by inner html if required
             var interpolateMatches = iElementText.match(interpolateRegExp);
